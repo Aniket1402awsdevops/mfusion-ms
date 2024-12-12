@@ -18,6 +18,6 @@ spec:
             path: "/"
             backend:
               service:
-                name: preprod-fusion-ms-service
+                name: dev-fusion-ms-service
                 port:
                   number: 8080
