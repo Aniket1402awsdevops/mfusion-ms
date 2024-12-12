@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: preprod-fusion-ms-application-config
+  namespace: preprod
+  labels:
+    env: preprod
+    app: fusion-ms-ms
+    layer: frontend
+data:
+  application.properties: |
+    # Add your application properties here
