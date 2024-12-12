@@ -4,7 +4,7 @@ metadata:
   name: -fusion-ms-ingress
   namespace: preprod
   labels:
-    env: preprod
+    env: dev
     app: fusion-ms-ms
     layer: frontend
   annotations:
