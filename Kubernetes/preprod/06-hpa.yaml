@@ -2,7 +2,7 @@ apiVersion: autoscaling/v1
 kind: HorizontalPodAutoscaler
 metadata:
   name: preprod-fusion-ms-hpa
-  namespace: dev
+  namespace: preprod
   labels:
     env: preprod
     app: fusion-ms-ms
