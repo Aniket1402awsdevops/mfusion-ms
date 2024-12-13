@@ -60,8 +60,10 @@ pipeline {
                     steps {
                         withCredentials([usernamePassword(credentialsId: 'DOCKER_HUB_CRED', usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
                             echo "Pushing Docker Image to DockerHub: ${env.IMAGE_NAME}"
-                            sh "docker login -u ${DOCKER_USERNAME} -p ${DOCKER_PASSWORD}"
-                            sh "docker push ${env.IMAGE_NAME}"
+                            // Modify docker login command to securely pass the password via stdin
+                            sh "echo \$DOCKER_PASSWORD | docker login -u \$DOCKER_USERNAME --password-stdin"
+                            // Explicitly reference the Docker Hub registry
+                            sh "docker push docker.io/${env.IMAGE_NAME}"
                             echo "Docker Image Push to DockerHub Completed"
                         }
                     }
@@ -133,6 +135,7 @@ pipeline {
                     echo "Deploying to Dev Environment"
                     def yamlFiles = ['00-ingress.yaml', '02-service.yaml', '03-service-account.yaml', '04-deployment.yaml', '05-configmap.yaml', '06.hpa.yaml']
                     def yamlDir = 'kubernetes/dev/'
+
                     // Replace <latest> in dev environment only
                     sh "sed -i 's/<latest>/mfusion-ms-v.1.${BUILD_NUMBER}/g' ${yamlDir}05-deployment.yaml"
 
@@ -163,70 +166,4 @@ pipeline {
             steps {
                 script {
                     echo "Deploying to Preprod Environment"
-                    def yamlFiles = ['00-ingress.yaml', '02-service.yaml', '03-service-account.yaml', '04-deployment.yaml', '05-configmap.yaml', '06.hpa.yaml']
-                    def yamlDir = 'kubernetes/preprod/'
-
-                    // No sed command for preprod, manual update will be applied
-
-                    withCredentials([file(credentialsId: KUBECONFIG_ID, variable: 'KUBECONFIG'),
-                                     [$class: 'AmazonWebServicesCredentialsBinding',
-                                      credentialsId: 'aws-credentials',
-                                      accessKeyVariable: 'AWS_ACCESS_KEY_ID',
-                                      secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']]) {
-                        yamlFiles.each { yamlFile ->
-                            sh """
-                                aws configure set aws_access_key_id \$AWS_ACCESS_KEY_ID
-                                aws configure set aws_secret_access_key \$AWS_SECRET_ACCESS_KEY
-                                aws configure set region ${REGION}
-
-                                kubectl apply -f ${yamlDir}${yamlFile} --kubeconfig=\$KUBECONFIG -n preprod --validate=false
-                            """
-                        }
-                    }
-                    echo "Deployment to Preprod Completed"
-                }
-            }
-        }
-
-        stage('Deploy to Production Environment') {
-            when {
-                branch 'prod'
-            }
-            steps {
-                script {
-                    echo "Deploying to Prod Environment"
-                    def yamlFiles = ['00-ingress.yaml', '02-service.yaml', '03-service-account.yaml', '04-deployment.yaml', '05-configmap.yaml', '06.hpa.yaml']
-                    def yamlDir = 'kubernetes/prod/'
-
-                    // No sed command for prod, manual update will be applied
-
-                    withCredentials([file(credentialsId: KUBECONFIG_ID, variable: 'KUBECONFIG'),
-                                     [$class: 'AmazonWebServicesCredentialsBinding',
-                                      credentialsId: 'aws-credentials',
-                                      accessKeyVariable: 'AWS_ACCESS_KEY_ID',
-                                      secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']]) {
-                        yamlFiles.each { yamlFile ->
-                            sh """
-                                aws configure set aws_access_key_id \$AWS_ACCESS_KEY_ID
-                                aws configure set aws_secret_access_key \$AWS_SECRET_ACCESS_KEY
-                                aws configure set region ${REGION}
-
-                                kubectl apply -f ${yamlDir}${yamlFile} --kubeconfig=\$KUBECONFIG -n prod --validate=false
-                            """
-                        }
-                    }
-                    echo "Deployment to Prod Completed"
-                }
-            }
-        }
-    }
-
-    post {
-        success {
-            echo "Deployment to ${env.BRANCH_NAME} environment completed successfully"
-        }
-        failure {
-            echo "Deployment to ${env.BRANCH_NAME} environment failed. Check logs for details."
-        }
-    }
-}
+                    def yamlFiles = ['00-ingress.yaml',
