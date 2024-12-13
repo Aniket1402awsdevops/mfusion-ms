@@ -166,4 +166,70 @@ pipeline {
             steps {
                 script {
                     echo "Deploying to Preprod Environment"
-                    def yamlFiles = ['00-ingress.yaml',
+                    def yamlFiles = ['00-ingress.yaml', '02-service.yaml', '03-service-account.yaml', '04-deployment.yaml', '05-configmap.yaml', '06.hpa.yaml']
+                    def yamlDir = 'kubernetes/preprod/'
+
+                    // No sed command for preprod, manual update will be applied
+
+                    withCredentials([file(credentialsId: KUBECONFIG_ID, variable: 'KUBECONFIG'),
+                                     [$class: 'AmazonWebServicesCredentialsBinding',
+                                      credentialsId: 'aws-credentials',
+                                      accessKeyVariable: 'AWS_ACCESS_KEY_ID',
+                                      secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']]) {
+                        yamlFiles.each { yamlFile ->
+                            sh """
+                                aws configure set aws_access_key_id \$AWS_ACCESS_KEY_ID
+                                aws configure set aws_secret_access_key \$AWS_SECRET_ACCESS_KEY
+                                aws configure set region ${REGION}
+
+                                kubectl apply -f ${yamlDir}${yamlFile} --kubeconfig=\$KUBECONFIG -n preprod --validate=false
+                            """
+                        }
+                    }
+                    echo "Deployment to Preprod Completed"
+                }
+            }
+        }
+
+        stage('Deploy to Production Environment') {
+            when {
+                branch 'prod'
+            }
+            steps {
+                script {
+                    echo "Deploying to Prod Environment"
+                    def yamlFiles = ['00-ingress.yaml', '02-service.yaml', '03-service-account.yaml', '04-deployment.yaml', '05-configmap.yaml', '06.hpa.yaml']
+                    def yamlDir = 'kubernetes/prod/'
+
+                    // No sed command for prod, manual update will be applied
+
+                    withCredentials([file(credentialsId: KUBECONFIG_ID, variable: 'KUBECONFIG'),
+                                     [$class: 'AmazonWebServicesCredentialsBinding',
+                                      credentialsId: 'aws-credentials',
+                                      accessKeyVariable: 'AWS_ACCESS_KEY_ID',
+                                      secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']]) {
+                        yamlFiles.each { yamlFile ->
+                            sh """
+                                aws configure set aws_access_key_id \$AWS_ACCESS_KEY_ID
+                                aws configure set aws_secret_access_key \$AWS_SECRET_ACCESS_KEY
+                                aws configure set region ${REGION}
+
+                                kubectl apply -f ${yamlDir}${yamlFile} --kubeconfig=\$KUBECONFIG -n prod --validate=false
+                            """
+                        }
+                    }
+                    echo "Deployment to Prod Completed"
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "Deployment to ${env.BRANCH_NAME} environment completed successfully"
+        }
+        failure {
+            echo "Deployment to ${env.BRANCH_NAME} environment failed. Check logs for details."
+        }
+    }
+}
