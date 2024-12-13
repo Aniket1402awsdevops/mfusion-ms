@@ -2,7 +2,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: prod-fusion-ms-service
-  namespace: prod
+  namespace: dev
   labels:
     env: prod
     app: fusion-ms
