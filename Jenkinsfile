@@ -74,7 +74,7 @@ pipeline {
                         sh "docker tag ${env.IMAGE_NAME} ${env.ECR_IMAGE_NAME}"
                         echo "Docker Image Tagging Completed"
 
-                        withDockerRegistry([credentialsId: 'ecr:ap-south-2:ecr-credentials', url: "https://${ECR_URL}"]) {
+                            withDockerRegistry([credentialsId: 'aws-ecr-credentials', url: "https://${ECR_URL}"]) {
                             echo "Pushing Docker Image to ECR: ${env.ECR_IMAGE_NAME}"
                             sh "docker push ${env.ECR_IMAGE_NAME}"
                             echo "Docker Image Push to ECR Completed"
