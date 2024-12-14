@@ -56,17 +56,7 @@ pipeline {
                     }
                 }
 
-                // Skipping Docker Hub Push Stage
-                // stage('Docker Push to Docker Hub') {
-                //     steps {
-                //         withCredentials([usernamePassword(credentialsId: 'DOCKER_HUB_CRED', usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
-                //             echo "Pushing Docker Image to DockerHub: ${env.IMAGE_NAME}"
-                //             sh "echo \$DOCKER_PASSWORD | docker login -u \$DOCKER_USERNAME --password-stdin"
-                //             sh "docker push docker.io/${env.IMAGE_NAME}"
-                //             echo "Docker Image Push to DockerHub Completed"
-                //         }
-                //     }
-                // }
+                // Docker Push to Docker Hub stage removed
 
                 stage('Docker Image Push to Amazon ECR') {
                     steps {
@@ -74,7 +64,7 @@ pipeline {
                         sh "docker tag ${env.IMAGE_NAME} ${env.ECR_IMAGE_NAME}"
                         echo "Docker Image Tagging Completed"
 
-                            withDockerRegistry([credentialsId: 'aws-ecr-credentials', url: "https://${ECR_URL}"]) {
+                        withDockerRegistry([credentialsId: 'aws-ecr-credentials', url: "https://${ECR_URL}"]) {
                             echo "Pushing Docker Image to ECR: ${env.ECR_IMAGE_NAME}"
                             sh "docker push ${env.ECR_IMAGE_NAME}"
                             echo "Docker Image Push to ECR Completed"
@@ -84,7 +74,47 @@ pipeline {
             }
         }
 
-        // Other stages for deployments
+        stage('Tag Docker Image for Preprod and Prod') {
+            when {
+                anyOf {
+                    branch 'preprod'
+                    branch 'prod'
+                }
+            }
+            steps {
+                script {
+                    def devImage = "Aniket1402awsdevops/mfusion-ms:mfusion-ms-v.1.${env.BUILD_NUMBER}"
+                    def preprodImage = "${ECR_URL}/mfusion-ms:preprod-mfusion-ms-v.1.${env.BUILD_NUMBER}"
+                    def prodImage = "${ECR_URL}/mfusion-ms:prod-mfusion-ms-v.1.${env.BUILD_NUMBER}"
+
+                    if (env.BRANCH_NAME == 'preprod') {
+                        echo "Tagging and Pushing Docker Image for Preprod: ${preprodImage}"
+                        sh "docker tag ${devImage} ${preprodImage}"
+                        withDockerRegistry([credentialsId: 'aws-ecr-credentials', url: "https://${ECR_URL}"]) {
+                            sh "docker push ${preprodImage}"
+                        }
+                    } else if (env.BRANCH_NAME == 'prod') {
+                        echo "Tagging and Pushing Docker Image for Prod: ${prodImage}"
+                        sh "docker tag ${devImage} ${prodImage}"
+                        withDockerRegistry([credentialsId: 'aws-ecr-credentials', url: "https://${ECR_URL}"]) {
+                            sh "docker push ${prodImage}"
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('Delete Local Docker Images') {
+            steps {
+                script {
+                    echo "Deleting Local Docker Images: ${env.IMAGE_NAME} ${env.ECR_IMAGE_NAME}"
+                    sh "docker rmi ${env.IMAGE_NAME} || true"
+                    sh "docker rmi ${env.ECR_IMAGE_NAME} || true"
+                    echo "Local Docker Images Deletion Completed"
+                }
+            }
+        }
+
         stage('Deploy to Development Environment') {
             when {
                 branch 'dev'
@@ -114,6 +144,70 @@ pipeline {
                         }
                     }
                     echo "Deployment to Dev Completed"
+                }
+            }
+        }
+
+        stage('Deploy to Preprod Environment') {
+            when {
+                branch 'preprod'
+            }
+            steps {
+                script {
+                    echo "Deploying to Preprod Environment"
+                    def yamlFiles = ['00-ingress.yaml', '02-service.yaml', '03-service-account.yaml', '04-deployment.yaml', '05-configmap.yaml', '06.hpa.yaml']
+                    def yamlDir = 'kubernetes/preprod/'
+
+                    // No sed command for preprod, manual update will be applied
+
+                    withCredentials([file(credentialsId: KUBECONFIG_ID, variable: 'KUBECONFIG'),
+                                     [$class: 'AmazonWebServicesCredentialsBinding',
+                                      credentialsId: 'aws-credentials',
+                                      accessKeyVariable: 'AWS_ACCESS_KEY_ID',
+                                      secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']]) {
+                        yamlFiles.each { yamlFile ->
+                            sh """
+                                aws configure set aws_access_key_id \$AWS_ACCESS_KEY_ID
+                                aws configure set aws_secret_access_key \$AWS_SECRET_ACCESS_KEY
+                                aws configure set region ${REGION}
+
+                                kubectl apply -f ${yamlDir}${yamlFile} --kubeconfig=\$KUBECONFIG -n preprod --validate=false
+                            """
+                        }
+                    }
+                    echo "Deployment to Preprod Completed"
+                }
+            }
+        }
+
+        stage('Deploy to Production Environment') {
+            when {
+                branch 'prod'
+            }
+            steps {
+                script {
+                    echo "Deploying to Prod Environment"
+                    def yamlFiles = ['00-ingress.yaml', '02-service.yaml', '03-service-account.yaml', '04-deployment.yaml', '05-configmap.yaml', '06.hpa.yaml']
+                    def yamlDir = 'kubernetes/prod/'
+
+                    // No sed command for prod, manual update will be applied
+
+                    withCredentials([file(credentialsId: KUBECONFIG_ID, variable: 'KUBECONFIG'),
+                                     [$class: 'AmazonWebServicesCredentialsBinding',
+                                      credentialsId: 'aws-credentials',
+                                      accessKeyVariable: 'AWS_ACCESS_KEY_ID',
+                                      secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']]) {
+                        yamlFiles.each { yamlFile ->
+                            sh """
+                                aws configure set aws_access_key_id \$AWS_ACCESS_KEY_ID
+                                aws configure set aws_secret_access_key \$AWS_SECRET_ACCESS_KEY
+                                aws configure set region ${REGION}
+
+                                kubectl apply -f ${yamlDir}${yamlFile} --kubeconfig=\$KUBECONFIG -n prod --validate=false
+                            """
+                        }
+                    }
+                    echo "Deployment to Prod Completed"
                 }
             }
         }
