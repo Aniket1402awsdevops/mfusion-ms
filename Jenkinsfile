@@ -64,10 +64,12 @@ pipeline {
                             sh "echo \$DOCKER_PASSWORD | docker login -u \$DOCKER_USERNAME --password-stdin"
 
                             // Convert the IMAGE_NAME to lowercase before pushing to Docker Hub
-                            def lowercaseImageName = env.IMAGE_NAME.toLowerCase()
+                            script {
+                                def lowercaseImageName = env.IMAGE_NAME.toLowerCase()
 
-                            // Explicitly reference the Docker Hub registry with lowercase image name
-                            sh "docker push docker.io/${lowercaseImageName}"
+                                // Explicitly reference the Docker Hub registry with lowercase image name
+                                sh "docker push docker.io/${lowercaseImageName}"
+                            }
                             echo "Docker Image Push to DockerHub Completed"
                         }
                     }
