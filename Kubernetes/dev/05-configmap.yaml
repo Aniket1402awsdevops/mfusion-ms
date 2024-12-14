@@ -5,7 +5,7 @@ metadata:
   namespace: dev
   labels:
     env: dev
-    app: fusion-ms-ms
+    app: mfusion-ms-ms
     layer: frontend
 data:
   application.properties: |
