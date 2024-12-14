@@ -4,7 +4,7 @@ metadata:
   name: dev-fusion-ms-deployment
   namespace: dev
   labels:
-    app: fusion-ms
+    app: mfusion-ms
     env: dev
 spec:
   replicas: 2
@@ -15,7 +15,7 @@ spec:
     type: RollingUpdate
   selector:
     matchLabels:
-      app: fusion-ms
+      app: mfusion-ms
       env: dev
   template:
     metadata:
