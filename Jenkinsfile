@@ -5,7 +5,7 @@ pipeline {
         AWS_ACCOUNT_ID = "879381286690"
         REGION = "ap-south-2"
         ECR_URL = "${AWS_ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com"
-        IMAGE_NAME = "Aniket1402awsdevops/mfusion-ms:mfusion-ms-v.1.${env.BUILD_NUMBER}"
+        IMAGE_NAME = "aniket1402awsdevops/mfusion-ms:mfusion-ms-v.1.${env.BUILD_NUMBER}" // lowercase repo name
         ECR_IMAGE_NAME = "${ECR_URL}/mfusion-ms:mfusion-ms-v.1.${env.BUILD_NUMBER}"
         KUBECONFIG_ID = 'kubeconfig-aws-aks-k8s-cluster'
     }
@@ -62,8 +62,12 @@ pipeline {
                             echo "Pushing Docker Image to DockerHub: ${env.IMAGE_NAME}"
                             // Modify docker login command to securely pass the password via stdin
                             sh "echo \$DOCKER_PASSWORD | docker login -u \$DOCKER_USERNAME --password-stdin"
-                            // Explicitly reference the Docker Hub registry
-                            sh "docker push docker.io/${env.IMAGE_NAME}"
+
+                            // Convert the IMAGE_NAME to lowercase before pushing to Docker Hub
+                            def lowercaseImageName = env.IMAGE_NAME.toLowerCase()
+
+                            // Explicitly reference the Docker Hub registry with lowercase image name
+                            sh "docker push docker.io/${lowercaseImageName}"
                             echo "Docker Image Push to DockerHub Completed"
                         }
                     }
@@ -94,7 +98,7 @@ pipeline {
             }
             steps {
                 script {
-                    def devImage = "Aniket1402awsdevops/mfusion-ms:mfusion-ms-v.1.${env.BUILD_NUMBER}"
+                    def devImage = "aniket1402awsdevops/mfusion-ms:mfusion-ms-v.1.${env.BUILD_NUMBER}" // lowercase repo name
                     def preprodImage = "${ECR_URL}/mfusion-ms:preprod-mfusion-ms-v.1.${env.BUILD_NUMBER}"
                     def prodImage = "${ECR_URL}/mfusion-ms:prod-mfusion-ms-v.1.${env.BUILD_NUMBER}"
 
@@ -169,8 +173,6 @@ pipeline {
                     def yamlFiles = ['00-ingress.yaml', '02-service.yaml', '03-service-account.yaml', '04-deployment.yaml', '05-configmap.yaml', '06.hpa.yaml']
                     def yamlDir = 'kubernetes/preprod/'
 
-                    // No sed command for preprod, manual update will be applied
-
                     withCredentials([file(credentialsId: KUBECONFIG_ID, variable: 'KUBECONFIG'),
                                      [$class: 'AmazonWebServicesCredentialsBinding',
                                       credentialsId: 'aws-credentials',
@@ -200,8 +202,6 @@ pipeline {
                     echo "Deploying to Prod Environment"
                     def yamlFiles = ['00-ingress.yaml', '02-service.yaml', '03-service-account.yaml', '04-deployment.yaml', '05-configmap.yaml', '06.hpa.yaml']
                     def yamlDir = 'kubernetes/prod/'
-
-                    // No sed command for prod, manual update will be applied
 
                     withCredentials([file(credentialsId: KUBECONFIG_ID, variable: 'KUBECONFIG'),
                                      [$class: 'AmazonWebServicesCredentialsBinding',
