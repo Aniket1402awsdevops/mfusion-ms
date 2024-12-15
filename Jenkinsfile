@@ -79,7 +79,7 @@ pipeline {
             steps {
                 script {
                     echo "Deploying to Dev Environment"
-                    def yamlFile = 'kubernetes/dev/04-deployment.yaml'
+                    def yamlFile = 'Kubernetes/dev/04-deployment.yaml'
 
                     // Verify if the file exists before running the sed command
                     sh """
