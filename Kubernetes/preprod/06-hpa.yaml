@@ -1,11 +1,11 @@
 apiVersion: autoscaling/v1
 kind: HorizontalPodAutoscaler
 metadata:
-  name: preprod-fusion-ms-hpa
+  name: preprod-mfusion-ms-hpa
   namespace: preprod
   labels:
     env: preprod
-    app: fusion-ms-ms
+    app: mfusion-ms-ms
     layer: frontend
 spec:
   maxReplicas: 50
@@ -13,5 +13,5 @@ spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: preprod-fusion-ms-deployment
+    name: preprod-mfusion-ms-deployment
   targetCPUUtilizationPercentage: 80
