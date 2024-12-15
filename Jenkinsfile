@@ -126,7 +126,7 @@ pipeline {
                     def yamlDir = 'kubernetes/dev/'
 
                     // Replace <latest> in dev environment only
-                    sh "sed -i 's/<latest>/mfusion-ms-v.1.${BUILD_NUMBER}/g' ${yamlDir}05-deployment.yaml"
+                    sh "sed -i 's/<latest>/mfusion-ms-v.1.${BUILD_NUMBER}/g' ${yamlDir}04-deployment.yaml"
 
                     withCredentials([file(credentialsId: KUBECONFIG_ID, variable: 'KUBECONFIG'),
                                      [$class: 'AmazonWebServicesCredentialsBinding',
