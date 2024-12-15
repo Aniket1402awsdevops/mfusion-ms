@@ -79,7 +79,7 @@ pipeline {
             steps {
                 script {
                     echo "Deploying to Dev Environment"
-                    def yamlFile = 'kubernetes/dev/05-deployment.yaml'
+                    def yamlFile = 'kubernetes/dev/04-deployment.yaml'
 
                     // Replace <latest> with build version in dev environment
                     sh """
