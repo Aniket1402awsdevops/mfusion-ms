@@ -81,18 +81,24 @@ pipeline {
                     echo "Deploying to Dev Environment"
                     def yamlFile = 'kubernetes/dev/04-deployment.yaml'
 
+                    // Verify if the file exists before running the sed command
+                    sh """
+                        echo 'Checking if the file exists:'
+                        ls -R ${WORKSPACE}/kubernetes/dev/
+                    """
+
                     // Replace <latest> with build version in dev environment
                     sh """
                         sed -i 's|<latest>|${env.BUILD_NUMBER}|g' ${yamlFile}
                         cat ${yamlFile} | grep ${env.BUILD_NUMBER} || echo "Replacement failed in ${yamlFile}"
                     """
 
-                    // Deploying the YAML file
+                    // Deploy the updated YAML file
                     sh """
                         kubectl --kubeconfig=/var/lib/jenkins/.kube/config apply -f ${yamlFile}
                     """
 
-                    // Checking if ConfigMap has changed, and restart pods if so
+                    // Check if ConfigMap has changed, and restart pods if needed
                     def configMapChanged = sh(script: "git diff --name-only HEAD~1 | grep -q 'kubernetes/dev/06-configmap.yaml'", returnStatus: true)
                     if (configMapChanged == 0) {
                         echo "ConfigMap changed, restarting pods"

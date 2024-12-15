@@ -6,13 +6,13 @@ metadata:
   labels:
     app: mfusion-ms
     env: dev
-spec:    rollingUpdate:
-
-           replicas: 2
+spec:
+  replicas: 2
   strategy:
+    type: RollingUpdate
+    rollingUpdate:
       maxUnavailable: 25%
       maxSurge: 100%
-    type: RollingUpdate
   selector:
     matchLabels:
       app: mfusion-ms
@@ -26,7 +26,7 @@ spec:    rollingUpdate:
       serviceAccountName: dev-mfusion-ms-sa
       containers:
         - name: mfusion-ms
-          image: 879381286690.dkr.ecr.ap-south-2.amazonaws.com/fusion-ms-ms:latest
+          image: 879381286690.dkr.ecr.ap-south-2.amazonaws.com/fusion-ms-ms:{{IMAGE_TAG}}  # Replace <latest> with {{IMAGE_TAG}}
           resources:
             requests:
               memory: 50Mi
