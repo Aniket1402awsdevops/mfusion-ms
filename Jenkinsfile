@@ -72,42 +72,36 @@ pipeline {
             }
         }
 
-        stage('Deploy to Development Environment') {
+        stage('Deploy app to dev env') {
             when {
                 branch 'dev'
             }
             steps {
                 script {
                     echo "Deploying to Dev Environment"
-                    def yamlFiles = ['00-ingress.yaml', '02-service.yaml', '03-service-account.yaml', '04-deployment.yaml', '05-configmap.yaml', '06.hpa.yaml']
-                    def yamlDir = 'kubernetes/dev/'
+                    def yamlFile = 'kubernetes/dev/05-deployment.yaml'
 
-                    // Check if the 04-deployment.yaml file exists
-                    def yamlFilePath = "${yamlDir}04-deployment.yaml"
-                    def fileExists = fileExists(yamlFilePath)
-                    if (!fileExists) {
-                        error "File ${yamlFilePath} does not exist in the workspace!"
+                    // Replace <latest> with build version in dev environment
+                    sh """
+                        sed -i 's|<latest>|${env.BUILD_NUMBER}|g' ${yamlFile}
+                        cat ${yamlFile} | grep ${env.BUILD_NUMBER} || echo "Replacement failed in ${yamlFile}"
+                    """
+
+                    // Deploying the YAML file
+                    sh """
+                        kubectl --kubeconfig=/var/lib/jenkins/.kube/config apply -f ${yamlFile}
+                    """
+
+                    // Checking if ConfigMap has changed, and restart pods if so
+                    def configMapChanged = sh(script: "git diff --name-only HEAD~1 | grep -q 'kubernetes/dev/06-configmap.yaml'", returnStatus: true)
+                    if (configMapChanged == 0) {
+                        echo "ConfigMap changed, restarting pods"
+                        sh """
+                            kubectl --kubeconfig=/var/lib/jenkins/.kube/config rollout restart deployment dev-mfusion-ms-deployment -n dev
+                        """
+                    } else {
+                        echo "No ConfigMap Changes, Skipping Pod Restart"
                     }
-
-                    // Replace <latest> in dev environment only
-                    sh "sed -i 's#<latest>#mfusion-ms-v.1.${BUILD_NUMBER}#g' ${yamlFilePath}"
-
-                    withCredentials([file(credentialsId: KUBECONFIG_ID, variable: 'KUBECONFIG'),
-                                     [$class: 'AmazonWebServicesCredentialsBinding',
-                                      credentialsId: 'aws-credentials',
-                                      accessKeyVariable: 'AWS_ACCESS_KEY_ID',
-                                      secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']]) {
-                        yamlFiles.each { yamlFile ->
-                            sh """
-                                aws configure set aws_access_key_id \$AWS_ACCESS_KEY_ID
-                                aws configure set aws_secret_access_key \$AWS_SECRET_ACCESS_KEY
-                                aws configure set region ${REGION}
-
-                                kubectl apply -f ${yamlDir}${yamlFile} --kubeconfig=\$KUBECONFIG -n dev --validate=false
-                            """
-                        }
-                    }
-                    echo "Deployment to Dev Completed"
                 }
             }
         }
@@ -121,8 +115,6 @@ pipeline {
                     echo "Deploying to Preprod Environment"
                     def yamlFiles = ['00-ingress.yaml', '02-service.yaml', '03-service-account.yaml', '04-deployment.yaml', '05-configmap.yaml', '06.hpa.yaml']
                     def yamlDir = 'kubernetes/preprod/'
-
-                    // No sed command for preprod, manual update will be applied
 
                     withCredentials([file(credentialsId: KUBECONFIG_ID, variable: 'KUBECONFIG'),
                                      [$class: 'AmazonWebServicesCredentialsBinding',
@@ -153,8 +145,6 @@ pipeline {
                     echo "Deploying to Prod Environment"
                     def yamlFiles = ['00-ingress.yaml', '02-service.yaml', '03-service-account.yaml', '04-deployment.yaml', '05-configmap.yaml', '06.hpa.yaml']
                     def yamlDir = 'kubernetes/prod/'
-
-                    // No sed command for prod, manual update will be applied
 
                     withCredentials([file(credentialsId: KUBECONFIG_ID, variable: 'KUBECONFIG'),
                                      [$class: 'AmazonWebServicesCredentialsBinding',
