@@ -72,45 +72,67 @@ pipeline {
             }
         }
 
-        stage('Deploy app to dev env') {
-            when {
-                branch 'dev'
-            }
-            steps {
-                script {
-                    echo "Deploying to Dev Environment"
-                    def yamlFile = 'Kubernetes/dev/04-deployment.yaml'
+        stage('Tag Docker Image for Preprod and Prod') {
+                    when {
+                        anyOf {
+                            branch 'preprod'
+                            branch 'prod'
+                        }
+                    }
+                    steps {
+                        script {
+                            def targetTag = BRANCH_NAME == 'preprod' ? PREPROD_IMAGE_TAG : "prod-mfusion-ms-v.1.${BUILD_NUMBER}"
+                            def sourceTag = BRANCH_NAME == 'preprod' ? DEV_IMAGE_TAG : PREPROD_IMAGE_TAG
+                            def sourceImage = "${ECR_URL}/mfusion-ms:${sourceTag}"
+                            def targetImage = "${ECR_URL}/mfusion-ms:${targetTag}"
 
-                    // Verify if the file exists before running the sed command
-                    sh """
-                        echo 'Checking if the file exists:'
-                        ls -R ${WORKSPACE}/kubernetes/dev/
-                    """
-
-                    // Replace <latest> with build version in dev environment
-                    sh """
-                        sed -i 's|<latest>|${env.BUILD_NUMBER}|g' ${yamlFile}
-                        cat ${yamlFile} | grep ${env.BUILD_NUMBER} || echo "Replacement failed in ${yamlFile}"
-                    """
-
-                    // Deploy the updated YAML file
-                    sh """
-                        kubectl --kubeconfig=/var/lib/jenkins/.kube/config apply -f ${yamlFile}
-                    """
-
-                    // Check if ConfigMap has changed, and restart pods if needed
-                    def configMapChanged = sh(script: "git diff --name-only HEAD~1 | grep -q 'kubernetes/dev/06-configmap.yaml'", returnStatus: true)
-                    if (configMapChanged == 0) {
-                        echo "ConfigMap changed, restarting pods"
-                        sh """
-                            kubectl --kubeconfig=/var/lib/jenkins/.kube/config rollout restart deployment dev-mfusion-ms-deployment -n dev
-                        """
-                    } else {
-                        echo "No ConfigMap Changes, Skipping Pod Restart"
+                            echo "Pulling Source Image: ${sourceImage}"
+                            withDockerRegistry([credentialsId: 'ecr:ap-south-1:ecr-credentials', url: "https://${ECR_URL}"]) {
+                                def pullStatus = sh(script: "docker pull ${sourceImage}", returnStatus: true)
+                                if (pullStatus != 0) {
+                                    error("Source image ${sourceImage} does not exist or failed to pull.")
+                                }
+                                echo "Tagging Source Image as Target: ${targetImage}"
+                                sh "docker tag ${sourceImage} ${targetImage}"
+                                echo "Pushing Target Image to ECR: ${targetImage}"
+                                sh "docker push ${targetImage}"
+                            }
+                            echo "Cleaning Up Local Images"
+                            sh "docker rmi ${sourceImage} ${targetImage} || true"
+                        }
                     }
                 }
-            }
-        }
+
+        stage('Deploy app to dev env') {
+                    when {
+                        branch 'dev'
+                    }
+                    steps {
+                        script {
+                            echo "Deploying to Dev Environment"
+                            def yamlFile = 'Kubernetes/dev/04-deployment.yaml'
+
+                            sh """
+                                sed -i 's|<latest>|${DEV_IMAGE_TAG}|g' ${yamlFile}
+                                cat ${yamlFile} | grep ${DEV_IMAGE_TAG} || echo "Replacement failed in ${yamlFile}"
+                            """
+                            sh """
+                                kubectl --kubeconfig=/var/lib/jenkins/.kube/config apply -f kubernetes/dev/
+                            """
+
+                            def configMapChanged = sh(script: "git diff --name-only HEAD~1 | grep -q 'Kubernetes/dev/05-configmap.yaml'", returnStatus: true)
+                            if (configMapChanged == 0) {
+                                echo "ConfigMap changed, restarting pods"
+                                sh """
+                                    kubectl --kubeconfig=/var/lib/jenkins/.kube/config rollout restart deployment dev-mfusion-ms-deployment -n dev
+                                """
+                            } else {
+                                echo "No ConfigMap Changes, Skipping Pod Restart"
+                            }
+                        }
+                    }
+                }
+
 
         stage('Deploy to Preprod Environment') {
             when {
