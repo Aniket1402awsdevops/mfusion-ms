@@ -8,6 +8,7 @@ pipeline {
         IMAGE_NAME = "Aniket1402awsdevops/mfusion-ms:mfusion-ms-v.1.${env.BUILD_NUMBER}"
         ECR_IMAGE_NAME = "${ECR_URL}/mfusion-ms:mfusion-ms-v.1.${env.BUILD_NUMBER}"
         KUBECONFIG_ID = 'kubeconfig-aws-aks-k8s-cluster'
+        DEV_IMAGE_TAG = "mfusion-ms-v.1.${env.BUILD_NUMBER}"  // Define DEV_IMAGE_TAG
     }
 
     options {
@@ -132,7 +133,6 @@ pipeline {
                         }
                     }
                 }
-
 
         stage('Deploy to Preprod Environment') {
             when {
