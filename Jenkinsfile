@@ -56,8 +56,6 @@ pipeline {
                     }
                 }
 
-                // Docker Push to Docker Hub stage removed
-
                 stage('Docker Image Push to Amazon ECR') {
                     steps {
                         echo "Tagging Docker Image for ECR: ${env.ECR_IMAGE_NAME}"
@@ -74,47 +72,6 @@ pipeline {
             }
         }
 
-        stage('Tag Docker Image for Preprod and Prod') {
-            when {
-                anyOf {
-                    branch 'preprod'
-                    branch 'prod'
-                }
-            }
-            steps {
-                script {
-                    def devImage = "Aniket1402awsdevops/mfusion-ms:mfusion-ms-v.1.${env.BUILD_NUMBER}"
-                    def preprodImage = "${ECR_URL}/mfusion-ms:preprod-mfusion-ms-v.1.${env.BUILD_NUMBER}"
-                    def prodImage = "${ECR_URL}/mfusion-ms:prod-mfusion-ms-v.1.${env.BUILD_NUMBER}"
-
-                    if (env.BRANCH_NAME == 'preprod') {
-                        echo "Tagging and Pushing Docker Image for Preprod: ${preprodImage}"
-                        sh "docker tag ${devImage} ${preprodImage}"
-                        withDockerRegistry([credentialsId: 'aws-ecr-credentials', url: "https://${ECR_URL}"]) {
-                            sh "docker push ${preprodImage}"
-                        }
-                    } else if (env.BRANCH_NAME == 'prod') {
-                        echo "Tagging and Pushing Docker Image for Prod: ${prodImage}"
-                        sh "docker tag ${devImage} ${prodImage}"
-                        withDockerRegistry([credentialsId: 'aws-ecr-credentials', url: "https://${ECR_URL}"]) {
-                            sh "docker push ${prodImage}"
-                        }
-                    }
-                }
-            }
-        }
-
-        stage('Delete Local Docker Images') {
-            steps {
-                script {
-                    echo "Deleting Local Docker Images: ${env.IMAGE_NAME} ${env.ECR_IMAGE_NAME}"
-                    sh "docker rmi ${env.IMAGE_NAME} || true"
-                    sh "docker rmi ${env.ECR_IMAGE_NAME} || true"
-                    echo "Local Docker Images Deletion Completed"
-                }
-            }
-        }
-
         stage('Deploy to Development Environment') {
             when {
                 branch 'dev'
@@ -125,8 +82,15 @@ pipeline {
                     def yamlFiles = ['00-ingress.yaml', '02-service.yaml', '03-service-account.yaml', '04-deployment.yaml', '05-configmap.yaml', '06.hpa.yaml']
                     def yamlDir = 'kubernetes/dev/'
 
+                    // Check if the 04-deployment.yaml file exists
+                    def yamlFilePath = "${yamlDir}04-deployment.yaml"
+                    def fileExists = fileExists(yamlFilePath)
+                    if (!fileExists) {
+                        error "File ${yamlFilePath} does not exist in the workspace!"
+                    }
+
                     // Replace <latest> in dev environment only
-                    sh "sed -i 's/<latest>/mfusion-ms-v.1.${BUILD_NUMBER}/g' ${yamlDir}04-deployment.yaml"
+                    sh "sed -i 's#<latest>#mfusion-ms-v.1.${BUILD_NUMBER}#g' ${yamlFilePath}"
 
                     withCredentials([file(credentialsId: KUBECONFIG_ID, variable: 'KUBECONFIG'),
                                      [$class: 'AmazonWebServicesCredentialsBinding',
