@@ -26,7 +26,7 @@ spec:
       serviceAccountName: preprod-mfusion-ms-sa
       containers:
         - name: mfusion-ms
-          image: 879381286690.dkr.ecr.ap-south-2.amazonaws.com/mfusion-ms-ms:latest
+          image: 879381286690.dkr.ecr.ap-south-2.amazonaws.com/mfusion-ms:latest
           resources:
             requests:
               memory: 50Mi

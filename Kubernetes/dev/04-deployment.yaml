@@ -26,7 +26,7 @@ spec:
       serviceAccountName: dev-mfusion-ms-sa
       containers:
         - name: mfusion-ms
-          image: 879381286690.dkr.ecr.ap-south-2.amazonaws.com/fusion-ms-ms:<latest>  # Placeholder for image tag
+          image: 879381286690.dkr.ecr.ap-south-2.amazonaws.com/mfusion-ms:<latest>
           resources:
             requests:
               memory: 50Mi

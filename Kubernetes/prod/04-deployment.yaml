@@ -15,7 +15,7 @@ spec:
     type: RollingUpdate
   selector:
     matchLabels:
-      app: fusion-ms
+      app: mfusion-ms
       env: prod
   template:
     metadata:
@@ -25,8 +25,8 @@ spec:
     spec:
       serviceAccountName: prod-mfusion-ms-sa
       containers:
-        - name: fusion-ms
-          image: 879381286690.dkr.ecr.ap-south-2.amazonaws.com/fusion-ms-ms:latest
+        - name: mfusion-ms
+          image: 879381286690.dkr.ecr.ap-south-2.amazonaws.com/mfusion-ms:latest
           resources:
             requests:
               memory: 50Mi
