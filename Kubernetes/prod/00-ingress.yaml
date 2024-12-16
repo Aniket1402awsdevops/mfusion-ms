@@ -1,23 +1,23 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: prod-fusion-ms-ingress
-  namespace: prod
+  name: prod-mfusion-ms-ingress
+  namespace:dev
   labels:
     env: prod
-    app: fusion-ms-ms
+    app: mfusion-ms-ms
     layer: frontend
   annotations:
     nginx.ingress.kubernetes.io/rewrite-target: /
 spec:
   rules:
-    - host: fusion-ms.connectingclouds.in
+    - host: mfusion-ms.connectingclouds.in
       http:
         paths:
           - pathType: Prefix
             path: "/"
             backend:
               service:
-                name: prod-fusion-ms-service
+                name: prod-mfusion-ms-service
                 port:
                   number: 8080
