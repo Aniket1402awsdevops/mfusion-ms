@@ -1,10 +1,10 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: dev-mfusion-ms-application-config
-  namespace: dev
+  name: prod-mfusion-ms-application-config
+  namespace: prod
   labels:
-    env: dev
+    env: prod
     app: mfusion-ms-ms
     layer: frontend
 data:

@@ -4,7 +4,7 @@ metadata:
   name: -mfusion-ms-ingress
   namespace: preprod
   labels:
-    env: dev
+    env: preprod
     app: mfusion-ms-ms
     layer: frontend
   annotations:
@@ -18,6 +18,6 @@ spec:
             path: "/"
             backend:
               service:
-                name: dev-mfusion-ms-service
+                name: preprod-mfusion-ms-service
                 port:
                   number: 8080
