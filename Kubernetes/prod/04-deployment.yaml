@@ -1,11 +1,11 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: prod-mfusion-ms-deployment
-  namespace: prod
+  name: dev-fusion-ms-deployment
+  namespace: dev
   labels:
-    app: mfusion-ms
-    env: prod
+    app: fusion-ms
+    env: dev
 spec:
   replicas: 2
   strategy:
@@ -15,18 +15,18 @@ spec:
     type: RollingUpdate
   selector:
     matchLabels:
-      app: mfusion-ms
-      env: prod
+      app: fusion-ms
+      env: dev
   template:
     metadata:
       labels:
-        app: mfusion-ms
-        env: prod
+        app: fusion-ms
+        env: dev
     spec:
-      serviceAccountName: prod-mfusion-ms-sa
+      serviceAccountName: dev-fusion-ms-sa
       containers:
-        - name: mfusion-ms
-          image: 879381286690.dkr.ecr.ap-south-2.amazonaws.com/mfusion-ms:latest
+        - name: fusion-ms
+          image: 559220132560.dkr.ecr.ap-south-1.amazonaws.com/fusion-ms-ms:latest
           resources:
             requests:
               memory: 50Mi
@@ -43,4 +43,4 @@ spec:
       volumes:
         - name: application-config
           configMap:
-            name: prod-mfusion-ms-application-config
+            name: dev-fusion-ms-application-config
