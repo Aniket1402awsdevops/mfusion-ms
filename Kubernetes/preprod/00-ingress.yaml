@@ -1,7 +1,7 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: -mfusion-ms-ingress
+  name: mfusion-ms-ingress
   namespace: preprod
   labels:
     env: preprod
