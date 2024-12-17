@@ -2,7 +2,7 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: prod-mfusion-ms-ingress
-  namespace:dev
+  namespace: prod
   labels:
     env: prod
     app: mfusion-ms-ms
